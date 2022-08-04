@@ -1962,7 +1962,6 @@ static int32_t libstorage_init_spdk_module(void)
 {
     int32_t ret;
 
-    spdk_reactors_use(true);
     ret = libstorage_init_with_reactor();
 
     if (ret != 0) {

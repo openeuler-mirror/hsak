@@ -21,7 +21,7 @@ HSAK用户态IO引擎基于开源的SPDK基础上进行开发：
 
 3. 编译
    
-    $ cd hsak-1.0
+    $ cd hsak
    
     $ mkdir build
    
