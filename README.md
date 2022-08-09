@@ -40,7 +40,7 @@ HSAK用户态IO引擎基于开源的SPDK基础上进行开发：
 ### 使用约束
 
 1. 同一台机器最多使用和管理512个NVMe设备
-2. 启用HSAK执行IO相关业务是，需要确保系统有至少500M以上连续的空闲大页内存
+2. 启用HSAK执行IO相关业务时，需要确保系统有至少500M以上连续的空闲大页内存
 3. 启用用户态IO组件执行相关业务时，需要确保硬盘管理组件（ublock）已经启用
 4. 启用磁盘管理组件（ublock）执行相关业务时，需确保系统有足够的连续空闲内存，每次初始化ublock组件会申请20MB大页内存
 5. 每次运行HSAK之前，产品需要调用setup.sh来配置打野，解绑NVMe设备内核态驱动。
@@ -55,28 +55,28 @@ HSAK用户态IO引擎基于开源的SPDK基础上进行开发：
 ### nvme.conf.in配置文件
 
 HSAK配置文件默认安装在/etc/spdk/nvme.conf.in，开发人员可以根据实际业务需要对配置文件进行修改，配置文件内容如下：
-[Global]
-a. ReactorMask: 指定用于轮询IO的核（16进制，不能指定0核，按bit位从低位到高位，分别表示不同CPU核，如：0x1表示0核，0x6表示1、2两个核，以此类推，本字段最大支持34个字符，去掉表示16进制的0x标记，剩余32个计数字符，每个16进制字符最大是F，可表示4个核，所以最多可以支持32*4=128个核）。
-b. LogLevel：HSAK日志打印级别（0：error；1：warning；2：notice；3：info；4：debug）。
-c. MemSize：HSAK占用的内存（最小值为500MB）
-d. MultiQ：是否在同一个块设备上开启多队列。
-e. E2eDif：DIF类型（1：半程保护；2：全程保护），不同厂商的硬盘对DIF支持能力可能不同，具体请参考硬件厂家资料。
-f. IoStat：是否使能IO统计开关（Yes\No）
-h. RpcServer：是否启动rpc侦听线程（Yes\No）
-i. NvmeCUSE：是否启动CUSE功能（Yes\No），开启后在/dev/spdk目录下生成nvme字符设备
-[Nvme]
-a. TransportID：指定NVMe控制器的PCI地址和名称，使用格式为：TransportID "trtype:PCIe traddr:0000:09:00.0" nvme0
-b. RetryCount：IO失败时的重试次数，0表示不重试，最大255.
-c. TimeoutUsec：IO超市时间，0或者不配置该配置项表示不设置超时时间，单位是us。
-d. ActionOnTimeout：IO超时行为（None：仅打印信息；Reset：reset控制器；abort：丢弃超时指令），默认None。
-[Reactor]
-a. BatchSize：支持批量提交提交IO的个数，默认是8，最大是32.
+- [Global]
+1. ReactorMask: 指定用于轮询IO的核（16进制，不能指定0核，按bit位从低位到高位，分别表示不同CPU核，如：0x1表示0核，0x6表示1、2两个核，以此类推，本字段最大支持34个字符，去掉表示16进制的0x标记，剩余32个计数字符，每个16进制字符最大是F，可表示4个核，所以最多可以支持32*4=128个核）。
+2. LogLevel：HSAK日志打印级别（0：error；1：warning；2：notice；3：info；4：debug）。
+3. MemSize：HSAK占用的内存（最小值为500MB）
+4. MultiQ：是否在同一个块设备上开启多队列。
+5. E2eDif：DIF类型（1：半程保护；2：全程保护），不同厂商的硬盘对DIF支持能力可能不同，具体请参考硬件厂家资料。
+6. IoStat：是否使能IO统计开关（Yes\No）
+7. RpcServer：是否启动rpc侦听线程（Yes\No）
+8. NvmeCUSE：是否启动CUSE功能（Yes\No），开启后在/dev/spdk目录下生成nvme字符设备
+- [Nvme]
+1. TransportID：指定NVMe控制器的PCI地址和名称，使用格式为：TransportID "trtype:PCIe traddr:0000:09:00.0" nvme0
+2. RetryCount：IO失败时的重试次数，0表示不重试，最大255.
+3. TimeoutUsec：IO超市时间，0或者不配置该配置项表示不设置超时时间，单位是us。
+4. ActionOnTimeout：IO超时行为（None：仅打印信息；Reset：reset控制器；abort：丢弃超时指令），默认None。
+- [Reactor]
+1. BatchSize：支持批量提交提交IO的个数，默认是8，最大是32.
 
 ### 头文件引用
 
 HSAK提供两个对外头文件，开发者在使用HSAK进行开发时需要包含这两个文件：
-bdev_rw.h：定义聊数据面用户态IO操作的宏、枚举、数据结构和接口API。
-ublock.h：定义了管理面设备管理、信息获取等功能的宏、枚举、数据结构和接口API。
+1. bdev_rw.h：定义了数据面用户态IO操作的宏、枚举、数据结构和接口API。
+2. ublock.h：定义了管理面设备管理、信息获取等功能的宏、枚举、数据结构和接口API。
 
 ### 业务运行
 
