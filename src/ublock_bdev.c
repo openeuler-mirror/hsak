@@ -604,6 +604,7 @@ int init_ublock(const char *name, enum ublock_rpc_server_status flg)
     /* which will lead to procee exit */
     (void)signal(SIGPIPE, ublock_ignore_sig);
 
+#ifndef UNIT_TEST
     /* env_dpdk initialize */
     spdk_env_opts_init(&env_opts);
     env_opts.name = tmpName;
@@ -612,6 +613,7 @@ int init_ublock(const char *name, enum ublock_rpc_server_status flg)
         SPDK_ERRLOG("Failed to initialize SPDK env\n");
         goto FAILURE;
     }
+#endif
 
     /* start rpc server including rpc service and monitor service */
     if (flg == UBLOCK_RPC_SERVER_ENABLE) {

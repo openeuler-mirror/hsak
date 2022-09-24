@@ -144,3 +144,6 @@ endif()
 
 # compile cmdline tools
 add_subdirectory(cli)
+
+# compile test
+add_subdirectory(test)
