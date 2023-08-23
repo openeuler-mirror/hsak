@@ -1408,7 +1408,7 @@ int ublock_get_SMART_info_by_esn(const char *esn, uint32_t nsid, struct ublock_S
         return rc;
     }
 
-    if (bdev.pci == NULL || strlen(bdev.pci) > UBLOCK_PCI_ADDR_MAX_LEN - 1) {
+    if (strlen(bdev.pci) > UBLOCK_PCI_ADDR_MAX_LEN - 1) {
         ublock_free_bdev(&bdev);
         (void)pthread_mutex_unlock(&g_esn_lock);
         SPDK_ERRLOG("[ublock] error PCI address string: %s\n", bdev.pci);
