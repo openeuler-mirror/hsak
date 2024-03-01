@@ -383,7 +383,7 @@ static int ublock_inject_error_to_smart_info(struct err_injc_args args)
 
     rc = ublock_send_request_err_injc(sockaddr, cmd_string);
     if (rc != 0) {
-        printf("send request to inject error to smart info fail!\n");
+        printf("fail to send request to inject error to smart info!\n");
     }
 
     free(sockaddr);
