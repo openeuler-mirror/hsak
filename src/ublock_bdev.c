@@ -18,8 +18,10 @@
 #include <errno.h>
 #include <pthread.h>
 #include <regex.h>
-#include <rte_eal.h>
-#include <rte_bus_pci.h>
+#include <spdk/rte_bus_pci.h>
+#include <spdk/bus_pci_driver.h>
+#include <spdk/rte_bus.h>
+#include <spdk/bus_driver.h>
 #include <spdk/env.h>
 #include <spdk/event.h>
 #include <spdk/nvme.h>
@@ -82,6 +84,30 @@ static void completion_poll_status_set_done(void *cb_arg, const struct spdk_nvme
     }
     status->done = true;
 }
+
+/** List of PCI devices */
+RTE_TAILQ_HEAD(rte_pci_device_list, rte_pci_device);
+/** List of PCI drivers */
+RTE_TAILQ_HEAD(rte_pci_driver_list, rte_pci_driver);
+
+struct rte_pci_bus {
+	struct rte_bus bus;               /**< Inherit the generic class */
+	struct rte_pci_device_list device_list;  /**< List of PCI devices */
+	struct rte_pci_driver_list driver_list;  /**< List of PCI drivers */
+};
+
+const char *pci_get_sysfs_path(void)
+{
+        const char *path = NULL;
+
+        path = getenv("SYSFS_PCI_DEVICES");
+        if (path == NULL) {
+                return "/sys/bus/pci/devices";
+	}
+
+        return path;
+}
+
 
 static int ublock_uio_lock_init(void)
 {
@@ -741,7 +767,7 @@ static bool ublock_is_device_path(const struct rte_pci_device *dev)
         return false;
     }
 
-    sys_path = rte_pci_get_sysfs_path();
+    sys_path = pci_get_sysfs_path();
     rc = snprintf_s(dirname, PATH_MAX,
                     strlen(sys_path) + strlen(pci) + 1,
                     "%s/%s", sys_path, pci);
@@ -874,6 +900,7 @@ static void attach_cb(void *cb_ctx,
                       struct spdk_nvme_ctrlr *ctrlr,
                       const struct spdk_nvme_ctrlr_opts *opts)
 {
+#define IO_TIMEOUT_US 30000000
     if (cb_ctx == NULL) {
         SPDK_WARNLOG("[ublock] wrong input when spdk_nvme_probe attach\n");
         return;
@@ -882,7 +909,8 @@ static void attach_cb(void *cb_ctx,
 #ifdef DEBUG
     SPDK_NOTICELOG("[ublock] Attached to %s\n", trid->traddr);
 #endif
-    spdk_nvme_ctrlr_register_timeout_callback(ctrlr, 150000000, timeout_cb, NULL); /* 150000000 is 150s timeout */
+    spdk_nvme_ctrlr_register_timeout_callback(ctrlr, IO_TIMEOUT_US,
+		    150000000, timeout_cb, NULL); /* 150000000 is 150s timeout */
     bdev->ctrlr = ctrlr;
 }
 
@@ -991,6 +1019,7 @@ static int ublock_parse_bdev_ctrlr_info(struct ublock_bdev *bdev)
     int ret;
     uint32_t nsid;
     struct spdk_pci_device *pci_dev = NULL;
+    struct spdk_nvme_ns *ns;
 
     pci_dev = spdk_nvme_ctrlr_get_pci_device(bdev->ctrlr);
     if (pci_dev == NULL) {
@@ -1002,15 +1031,16 @@ static int ublock_parse_bdev_ctrlr_info(struct ublock_bdev *bdev)
         SPDK_ERRLOG("[ublock] failed to get active nsid\n");
         return -1;
     }
-    bdev->info.sector_size = spdk_nvme_ns_get_sector_size(&bdev->ctrlr->ns[nsid - 1]);
+    ns = spdk_nvme_ctrlr_get_ns(bdev->ctrlr, nsid);
+    bdev->info.sector_size = spdk_nvme_ns_get_sector_size(ns);
     if (bdev->ctrlr->cdata.oacs.ns_manage == 0) {
         /* nvme not support ns management */
-        bdev->info.cap_size = spdk_nvme_ns_get_size(&bdev->ctrlr->ns[nsid - 1]);
+        bdev->info.cap_size = spdk_nvme_ns_get_size(ns);
     } else {
         /* nvme support ns management */
         bdev->info.cap_size = bdev->ctrlr->cdata.tnvmcap[0];
     }
-    bdev->info.md_size = spdk_nvme_ns_get_md_size(&bdev->ctrlr->ns[nsid - 1]);
+    bdev->info.md_size = spdk_nvme_ns_get_md_size(ns);
     bdev->info.device_id = spdk_pci_device_get_device_id(pci_dev);
     bdev->info.subsystem_device_id = spdk_pci_device_get_subdevice_id(pci_dev);
     bdev->info.vendor_id = bdev->ctrlr->cdata.vid;
@@ -1294,7 +1324,7 @@ static int _ublock_get_SMART_info_from_local(const char *pci, uint32_t nsid,
 {
     int ret;
     int fd = -1;
-    struct spdk_nvme_transport_id trid;
+    struct spdk_nvme_transport_id trid = {0x0};
     struct ublock_bdev bdev;
     struct spdk_nvme_health_information_page *all_smart_info = (struct spdk_nvme_health_information_page *)smart_info;
 
@@ -1435,7 +1465,7 @@ static int _ublock_get_error_log_info_from_local(const char *pci, uint32_t err_e
 {
     int ret;
     int fd = -1;
-    struct spdk_nvme_transport_id trid;
+    struct spdk_nvme_transport_id trid = {0X0};
     struct ublock_bdev bdev;
 
     if (pci == NULL || errlog_info == NULL) {
@@ -1538,7 +1568,7 @@ exit:
 static int _ublock_nvme_ctrlr_shutdown_reset_from_local(const char *pci, bool reset_flag)
 {
     int fd = -1;
-    struct spdk_nvme_transport_id trid;
+    struct spdk_nvme_transport_id trid = {0x0};
     struct ublock_bdev bdev;
     int ret = 0;
 
@@ -1652,7 +1682,7 @@ static int _ublock_get_log_page_from_local(const char *pci, uint8_t log_page, ui
 {
     int rc;
     struct ublock_bdev bdev;
-    struct spdk_nvme_transport_id trid;
+    struct spdk_nvme_transport_id trid = {0x0};
     int fd = -1;
     struct completion_poll_status status;
 
@@ -1754,7 +1784,7 @@ static int _ublock_nvme_admin_passthru_local(const char *pci, void *cmd, void *b
 {
     int rc;
     struct ublock_bdev bdev;
-    struct spdk_nvme_transport_id trid;
+    struct spdk_nvme_transport_id trid = {0x0};
     struct completion_poll_status status;
 
     if (pci == NULL || cmd == NULL || buf == NULL || nbytes > UBLOCK_ADMIN_CMD_BUF_MAX_SIZE) {

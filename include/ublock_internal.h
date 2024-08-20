@@ -16,11 +16,13 @@
 #ifndef __UBLOCK_INTERNAL_H__
 #define __UBLOCK_INTERNAL_H__
 
+#define SECUREC_NEED_ERRNO_TYPE
+#include <securec.h>
+
 #include <spdk/jsonrpc.h>
 #include <spdk/nvme.h>
 
 #include <sys/queue.h>
-#include <securec.h>
 
 /* ublock RPC server */
 typedef void (*ublock_rpc_method_handler)(struct spdk_jsonrpc_request *request,
@@ -64,6 +66,7 @@ void ublock_rpc_close(void);
 char *ublock_get_sockaddr_shm(const char *pci, char *ctrl_name, size_t ctrl_name_size);
 char *ublock_get_sockaddr(const char *pci);
 void ublock_rpc_register_method(const char *method, ublock_rpc_method_handler func);
+const char *pci_get_sysfs_path(void);
 
 #define UBLOCK_RPC_REGISTER(method, func)                              \
     static void __attribute__((constructor)) rpc_register_##func(void) \

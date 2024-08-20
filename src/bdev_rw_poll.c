@@ -323,9 +323,9 @@ void LibstoragePollExitCheckResource(void)
         if (bdev_desc != NULL) {
             bdev = spdk_bdev_desc_get_bdev(bdev_desc);
 
-            (void)pthread_mutex_lock(&bdev->internal.mutex);
+            (void)spdk_spin_lock(&bdev->internal.spinlock);
             bdev->internal.status = SPDK_BDEV_STATUS_REMOVING;
-            (void)pthread_mutex_unlock(&bdev->internal.mutex);
+            (void)spdk_spin_unlock(&bdev->internal.spinlock);
 
             /* NVMe resources are released when the module exits */
             spdk_bdev_close(bdev_desc);
@@ -770,7 +770,7 @@ int32_t libstorage_init_with_reactor(void)
     }
 
     libstorage_notify_dpdk_init();
-    ret = spdk_reactors_init();
+    ret = spdk_reactors_init(SPDK_DEFAULT_MSG_MEMPOOL_SIZE);
     if (ret != 0) {
         SPDK_ERRLOG("Invalid reactor mask.\n");
         return ret;
