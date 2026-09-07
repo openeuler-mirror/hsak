@@ -1256,6 +1256,11 @@ static void *nvme_admin_passthru_cmd_alloc_and_parse(const void *pci_cmd)
     size_t size;
     void *cmd = NULL;
 
+    if (pci_cmd == NULL || spdk_base64_get_encoded_strlen(NVME_ADMIN_CMD_SIZE) != strlen(pci_cmd)) {
+        SPDK_ERRLOG("[ublock] cmd length error\n");
+        return NULL;
+    }
+
     cmd = malloc(NVME_ADMIN_CMD_SIZE);
     if (cmd == NULL) {
         SPDK_ERRLOG("fail to malloc cmd\n");
