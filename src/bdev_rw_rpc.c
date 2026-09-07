@@ -1254,6 +1254,13 @@ static void get_log_page_response(struct spdk_jsonrpc_request *request,
         return;
     }
 
+    if (log_page.size == 0 || log_page.size > LIBSTORAGE_ADMIN_CMD_BUF_MAX_SIZE) {
+        SPDK_ERRLOG("[libstorage_rpc] invalid log_page size[%u]\n", log_page.size);
+        spdk_jsonrpc_send_error_response(request, SPDK_JSONRPC_ERROR_INVALID_PARAMS, "Invalid parameters");
+        free(log_page.pci);
+        return;
+    }
+
     payload = (uint8_t *)malloc(log_page.size);
     if (payload == NULL) {
         free(log_page.pci);
