@@ -69,7 +69,7 @@ static int uio_ublock_lock_init(void)
         return -1;
     }
 
-    g_uio_ublock_lock = (uint32_t *)mmap(NULL, sizeof(uint32_t), PROT_WRITE, MAP_SHARED, shm_fd, 0);
+    g_uio_ublock_lock = (uint32_t *)mmap(NULL, sizeof(uint32_t), PROT_READ | PROT_WRITE, MAP_SHARED, shm_fd, 0);
     if (g_uio_ublock_lock == MAP_FAILED) {
         SPDK_ERRLOG("mmap failed: %d\n", errno);
         close(shm_fd);
