@@ -1781,6 +1781,13 @@ static void get_error_info_response(struct spdk_jsonrpc_request *request, const 
         return;
     }
 
+    if (pci.err_entries == 0 || pci.err_entries > LIBSTORAGE_ERROR_LOG_MAX_COUNT) {
+        SPDK_ERRLOG("[libstorage_rpc] invalid err_entries[%u]\n", pci.err_entries);
+        spdk_jsonrpc_send_error_response(request, SPDK_JSONRPC_ERROR_INVALID_PARAMS, "Invalid parameters");
+        free_rpc_pci_err_dev(&pci);
+        return;
+    }
+
     errs = libstorage_get_error_info(pci.pci, pci.err_entries, &error_info);
     if (errs < 0) {
         SPDK_ERRLOG("[libstorage_rpc]get error log info from spdk failed!\n");
