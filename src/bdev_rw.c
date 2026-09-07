@@ -1455,8 +1455,12 @@ void async_io_completion_cb(struct spdk_bdev_io *bdev_io, bool success, void *cb
             bserrno = -EIO;
         }
 
-        SPDK_ERRLOG("Failed to %s %s block on offset[%lu]. sc[%d], sct[%d]\n", op_name[io->opcode],
-                    bdev_io->bdev->name, io->offset, bserrno, scterrno);
+        if (io->opcode >= (uint16_t)OP_NOP) {
+            SPDK_ERRLOG("Invalid io opcode, fd[%d] op[%hu] offset[%lu]\n", io->fd, io->opcode, io->offset);
+        } else {
+            SPDK_ERRLOG("Failed to %s %s block on offset[%lu]. sc[%d], sct[%d]\n", op_name[io->opcode],
+                        bdev_io->bdev->name, io->offset, bserrno, scterrno);
+        }
     } else if (async_io_completion_dif_read_fail(io, bdev_io)) {
         bserrno = -EIO;
     }
