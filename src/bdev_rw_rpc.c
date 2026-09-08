@@ -1762,7 +1762,7 @@ static void get_error_info_response(struct spdk_jsonrpc_request *request, const 
 {
     int errs;
     struct spdk_json_write_ctx *wv = NULL;
-    struct spdk_nvme_error_information_entry error_info;
+    struct spdk_nvme_error_information_entry *error_info = NULL;
     struct rpc_pci_errs_dev pci = {};
 
     pci.pci = NULL;
@@ -1795,26 +1795,35 @@ static void get_error_info_response(struct spdk_jsonrpc_request *request, const 
         return;
     }
 
-    errs = libstorage_get_error_info(pci.pci, pci.err_entries, &error_info);
+    error_info = (struct spdk_nvme_error_information_entry *)malloc(sizeof(struct spdk_nvme_error_information_entry) *
+                                                                    pci.err_entries);
+    if (error_info == NULL) {
+        SPDK_ERRLOG("[libstorage_rpc]malloc failed!\n");
+        spdk_jsonrpc_send_error_response(request, SPDK_JSONRPC_ERROR_INTERNAL_ERROR, "Invalid memory");
+        free_rpc_pci_err_dev(&pci);
+        return;
+    }
+
+    errs = libstorage_get_error_info(pci.pci, pci.err_entries, error_info);
     if (errs < 0) {
         SPDK_ERRLOG("[libstorage_rpc]get error log info from spdk failed!\n");
         spdk_jsonrpc_send_error_response(request, SPDK_JSONRPC_ERROR_INTERNAL_ERROR,
                                          "Fail to get error info internal");
-        free_rpc_pci_err_dev(&pci);
-        return;
+        goto exit;
     }
 
     wv = spdk_jsonrpc_begin_result(request);
     if (wv == NULL) {
         SPDK_ERRLOG("[libstorage_rpc]start to response rpc call failed!\n");
-        free_rpc_pci_err_dev(&pci);
-        return;
+        goto exit;
     }
 
-    libstorage_geterr_fill_rsp(wv, errs, &error_info);
-    spdk_json_write_object_end(wv);
+    libstorage_geterr_fill_rsp(wv, errs, error_info);
+    (void)spdk_json_write_object_end(wv);
 
     spdk_jsonrpc_end_result(request, wv);
+exit:
+    free(error_info);
     free_rpc_pci_err_dev(&pci);
 }
 SPDK_RPC_REGISTER("get_error_log", get_error_info_response, SPDK_RPC_RUNTIME)
