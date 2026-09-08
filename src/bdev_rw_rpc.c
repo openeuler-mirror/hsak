@@ -676,6 +676,11 @@ static int libstorage_init_rpc_server_socket(void)
         return -1;
     }
 
+    /* Restrict socket file permissions to owner only */
+    if (chmod(g_rpc_sockfd_addr, S_IRWXU) != 0) {
+        SPDK_WARNLOG("[libstorage_rpc] failed to chmod RPC socket %s: %s\n", g_rpc_sockfd_addr, strerror(errno));
+    }
+
     return 0;
 }
 
@@ -713,7 +718,14 @@ register_to_ublock:
         /* if the socket file is deleted, restart the socket listen */
         if (access(g_rpc_sockfd_addr, F_OK) == -1) {
             spdk_rpc_close();
-            spdk_rpc_listen(g_rpc_sockfd_addr);
+            if (spdk_rpc_listen(g_rpc_sockfd_addr) < 0) {
+                break;
+            }
+            /* Restrict socket file permissions to owner only */
+            if (chmod(g_rpc_sockfd_addr, S_IRWXU) != 0) {
+                SPDK_WARNLOG("[libstorage_rpc] failed to chmod RPC socket %s: %s\n", 
+                            g_rpc_sockfd_addr, strerror(errno));
+            }
         }
     }
 
