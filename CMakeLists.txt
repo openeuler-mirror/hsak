@@ -51,12 +51,11 @@ if(CONFIG_ERR_INJC STREQUAL "y")
  list(APPEND HSAK_MGR_SRC ${SRC_DIR}/ublock_smart_info_err_injc.c)
 endif()
 
-set(DPDK_DIR "/usr/lib64/dpdk/pmds-22.0")
 
-set(DPDK_LIB_DIR "${DPDK_DIR}/lib")
+set(DPDK_LIB_DIR "/usr/lib64")
 set(DPDK_STATIC_LIB_DIR "/usr/lib64")
 
-set(DPDK_INC_DIR "${PROJECT_SOURCE_DIR}/dpdk_include")
+set(DPDK_INC_DIR "/usr/include/dpdk")
 
 add_library(
  storage_bdev_rw
@@ -90,8 +89,8 @@ target_include_directories(storage_ublock PRIVATE
  ${PROJECT_SOURCE_DIR}/include
  ${DPDK_INC_DIR})
 
- target_compile_options(storage_bdev_rw PRIVATE -fsigned-char -Wno-deprecated-declarations -fno-omit-frame-pointer -Wall -Wextra -Wno-unused-parameter -Wno-missing-field-initializers -Wmissing-declarations -fno-strict-aliasing -I${PROJECT_SOURCE_DIR}/include -Werror -Wformat -Wformat-security -D_GNU_SOURCE -fPIE -pie -fPIC -fstack-protector-strong -fno-common -DNDEBUG -O2 -D_FORTIFY_SOURCE=2 -Wall -Werror -fno-aggressive-loop-optimizations -pthread -Wno-pointer-sign -Wstrict-prototypes -Wold-style-definition -std=gnu99 -Wl,-z,relro,-z,now,-z,noexecstack -Wtrampolines)
- target_compile_options(storage_ublock PRIVATE -fsigned-char -fno-omit-frame-pointer -Wall -Wextra -Wno-unused-parameter -Wno-missing-field-initializers -Wmissing-declarations -fno-strict-aliasing -I${PROJECT_SOURCE_DIR}/include -Werror -Wformat -Wformat-security -D_GNU_SOURCE -fPIE -pie -fPIC -fstack-protector-strong -fno-common -DNDEBUG -O2 -D_FORTIFY_SOURCE=2 -Wall -Werror -pthread -Wno-pointer-sign -Wstrict-prototypes -Wold-style-definition -std=gnu99 -Wl,-z,relro,-z,now,-z,noexecstack -Wtrampolines)
+ target_compile_options(storage_bdev_rw PRIVATE -fsigned-char -Wno-deprecated-declarations -fno-omit-frame-pointer -Wall -Wextra -Wno-unused-parameter -Wno-missing-field-initializers -Wmissing-declarations -fno-strict-aliasing -I${PROJECT_SOURCE_DIR}/include -Werror -Wformat -Wformat-security -D_GNU_SOURCE -fPIE -fPIC -fstack-protector-strong -fno-common -DNDEBUG -O2 -D_FORTIFY_SOURCE=2 -Wall -Werror -fno-aggressive-loop-optimizations -pthread -Wno-pointer-sign -Wstrict-prototypes -Wold-style-definition -std=gnu99 -Wl,-z,relro,-z,now,-z,noexecstack -Wtrampolines)
+ target_compile_options(storage_ublock PRIVATE -fsigned-char -fno-omit-frame-pointer -Wall -Wextra -Wno-unused-parameter -Wno-missing-field-initializers -Wmissing-declarations -fno-strict-aliasing -I${PROJECT_SOURCE_DIR}/include -Werror -Wformat -Wformat-security -D_GNU_SOURCE -fPIE -fPIC -fstack-protector-strong -fno-common -DNDEBUG -O2 -D_FORTIFY_SOURCE=2 -Wall -Werror -pthread -Wno-pointer-sign -Wstrict-prototypes -Wold-style-definition -std=gnu99 -Wl,-z,relro,-z,now,-z,noexecstack -Wtrampolines)
 
 
 if(CONFIG_DEBUG STREQUAL "y")
@@ -126,14 +125,14 @@ if(NOT DEFINED CONFIG_DEBUG)
  set(CMAKE_SHARED_LINKER_FLAGS "-s")
 endif()
 
-set_target_properties(storage_bdev_rw PROPERTIES LINK_FLAGS "-fPIE -pie -fPIC -Wl,-z,relro,-z,now,-z,noexecstack -Wtrampolines -Wl,--whole-archive -Wl,-Bstatic -lspdk_vmd -lspdk_rdma -lspdk_event_vmd -lspdk_notify -lspdk_sock -lspdk_sock_posix -lspdk_event_sock -lspdk_bdev_nvme -lspdk_nvme -lspdk_event_bdev -lspdk_event_accel -lspdk_net -lspdk_bdev -lspdk_accel -lspdk_trace -lspdk_conf -lspdk_event -lspdk_util -lspdk_thread -lspdk_log -lspdk_jsonrpc -lspdk_json -lspdk_rpc -lspdk_env_dpdk -Wl,--no-whole-archive -Wl,--start-group -Wl,--whole-archive -Wl,-Bdynamic  ${DPDK_LIB_DIR}/librte_eal.so ${DPDK_LIB_DIR}/librte_mempool.so ${DPDK_LIB_DIR}/librte_ring.so ${DPDK_LIB_DIR}/librte_mempool_ring.so ${DPDK_LIB_DIR}/librte_bus_pci.so ${DPDK_LIB_DIR}/librte_power.so ${DPDK_LIB_DIR}/librte_mbuf.so ${DPDK_LIB_DIR}/librte_net.so ${DPDK_LIB_DIR}/librte_ethdev.so ${DPDK_LIB_DIR}/librte_telemetry.so -Wl,--end-group -Wl,--no-whole-archive")
-target_link_libraries(storage_bdev_rw PRIVATE aio pthread dl rt boundscheck uuid fuse3 rdmacm ibverbs)
+set_target_properties(storage_bdev_rw PROPERTIES LINK_FLAGS "-fPIE -fPIC -Wl,-z,relro,-z,now,-z,noexecstack -Wtrampolines -Wl,--whole-archive -Wl,-Bstatic -lspdk_vmd -lspdk_rdma -lspdk_event_vmd -lspdk_notify -lspdk_sock -lspdk_sock_posix -lspdk_event_sock -lspdk_bdev_nvme -lspdk_nvme -lspdk_event_bdev -lspdk_event_accel -lspdk_bdev -lspdk_accel -lspdk_trace -lspdk_conf -lspdk_event -lspdk_util -lspdk_thread -lspdk_log -lspdk_jsonrpc -lspdk_json -lspdk_rpc -lspdk_env_dpdk -Wl,--no-whole-archive -Wl,--start-group -Wl,--whole-archive -Wl,-Bdynamic  ${DPDK_LIB_DIR}/librte_eal.so ${DPDK_LIB_DIR}/librte_mempool.so ${DPDK_LIB_DIR}/librte_ring.so ${DPDK_LIB_DIR}/librte_mempool_ring.so ${DPDK_LIB_DIR}/librte_bus_pci.so ${DPDK_LIB_DIR}/librte_power.so ${DPDK_LIB_DIR}/librte_mbuf.so ${DPDK_LIB_DIR}/librte_net.so ${DPDK_LIB_DIR}/librte_ethdev.so ${DPDK_LIB_DIR}/librte_telemetry.so -Wl,--end-group -Wl,--no-whole-archive")
+target_link_libraries(storage_bdev_rw PRIVATE aio pthread dl rt boundscheck uuid fuse3 rdmacm ibverbs m)
 
 set_target_properties(storage_bdev_rw PROPERTIES NO_SONAME 1)
 
-set_target_properties(storage_ublock PROPERTIES LINK_FLAGS "-fPIE -pie -fPIC -Wl,-z,relro,-z,now,-z,noexecstack -Wtrampolines -Wl,--whole-archive -Wl,-Bstatic -lspdk_vmd -lspdk_rdma -lspdk_event_vmd -lspdk_notify -lspdk_sock -lspdk_sock_posix -lspdk_event_sock -lspdk_bdev_nvme -lspdk_nvme -lspdk_event_bdev -lspdk_event_accel -lspdk_net -lspdk_bdev -lspdk_accel -lspdk_trace -lspdk_conf -lspdk_util -lspdk_log -lspdk_event -lspdk_jsonrpc -lspdk_json -lspdk_rpc -lspdk_env_dpdk -lspdk_thread -Wl,--no-whole-archive -Wl,--start-group -Wl,--whole-archive ${DPDK_STATIC_LIB_DIR}/librte_eal.a ${DPDK_STATIC_LIB_DIR}/librte_mempool.a ${DPDK_STATIC_LIB_DIR}/librte_ring.a ${DPDK_STATIC_LIB_DIR}/librte_bus_pci.a ${DPDK_STATIC_LIB_DIR}/librte_pci.a ${DPDK_STATIC_LIB_DIR}/librte_acl.a ${DPDK_STATIC_LIB_DIR}/librte_kvargs.a ${DPDK_STATIC_LIB_DIR}/librte_mbuf.a ${DPDK_STATIC_LIB_DIR}/librte_power.a ${DPDK_STATIC_LIB_DIR}/librte_net.a ${DPDK_STATIC_LIB_DIR}/librte_ethdev.a ${DPDK_STATIC_LIB_DIR}/librte_telemetry.a -Wl,--end-group -Wl,--no-whole-archive -Wl,-Bdynamic")
+set_target_properties(storage_ublock PROPERTIES LINK_FLAGS "-fPIE -fPIC -Wl,-z,relro,-z,now,-z,noexecstack -Wtrampolines -Wl,--whole-archive -Wl,-Bstatic -lspdk_vmd -lspdk_rdma -lspdk_event_vmd -lspdk_notify -lspdk_sock -lspdk_sock_posix -lspdk_event_sock -lspdk_bdev_nvme -lspdk_nvme -lspdk_event_bdev -lspdk_event_accel -lspdk_bdev -lspdk_accel -lspdk_trace -lspdk_conf -lspdk_util -lspdk_log -lspdk_event -lspdk_jsonrpc -lspdk_json -lspdk_rpc -lspdk_env_dpdk -lspdk_thread -lspdk_vfio_user -lspdk_dma -lcrypto -Wl,--no-whole-archive -Wl,--start-group -Wl,--whole-archive ${DPDK_STATIC_LIB_DIR}/librte_eal.a ${DPDK_STATIC_LIB_DIR}/librte_mempool.a ${DPDK_STATIC_LIB_DIR}/librte_ring.a ${DPDK_STATIC_LIB_DIR}/librte_bus_pci.a ${DPDK_STATIC_LIB_DIR}/librte_pci.a ${DPDK_STATIC_LIB_DIR}/librte_acl.a ${DPDK_STATIC_LIB_DIR}/librte_kvargs.a ${DPDK_STATIC_LIB_DIR}/librte_mbuf.a ${DPDK_STATIC_LIB_DIR}/librte_power.a ${DPDK_STATIC_LIB_DIR}/librte_net.a ${DPDK_STATIC_LIB_DIR}/librte_ethdev.a ${DPDK_STATIC_LIB_DIR}/librte_telemetry.a ${DPDK_STATIC_LIB_DIR}/librte_log.a -Wl,--end-group -Wl,--no-whole-archive -Wl,-Bdynamic")
 
-target_link_libraries(storage_ublock PRIVATE aio pthread dl rt boundscheck uuid numa fuse3 rdmacm ibverbs)
+target_link_libraries(storage_ublock PRIVATE aio pthread dl rt boundscheck uuid numa fuse3 rdmacm ibverbs m)
 
 set_target_properties(storage_ublock PROPERTIES NO_SONAME 1)
 

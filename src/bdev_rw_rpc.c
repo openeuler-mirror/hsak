@@ -676,6 +676,11 @@ static int libstorage_init_rpc_server_socket(void)
         return -1;
     }
 
+    /* Restrict socket file permissions to owner only */
+    if (chmod(g_rpc_sockfd_addr, S_IRWXU) != 0) {
+        SPDK_WARNLOG("[libstorage_rpc] failed to chmod RPC socket %s: %s\n", g_rpc_sockfd_addr, strerror(errno));
+    }
+
     return 0;
 }
 
@@ -713,7 +718,14 @@ register_to_ublock:
         /* if the socket file is deleted, restart the socket listen */
         if (access(g_rpc_sockfd_addr, F_OK) == -1) {
             spdk_rpc_close();
-            spdk_rpc_listen(g_rpc_sockfd_addr);
+            if (spdk_rpc_listen(g_rpc_sockfd_addr) < 0) {
+                break;
+            }
+            /* Restrict socket file permissions to owner only */
+            if (chmod(g_rpc_sockfd_addr, S_IRWXU) != 0) {
+                SPDK_WARNLOG("[libstorage_rpc] failed to chmod RPC socket %s: %s\n", 
+                            g_rpc_sockfd_addr, strerror(errno));
+            }
         }
     }
 
@@ -1254,6 +1266,13 @@ static void get_log_page_response(struct spdk_jsonrpc_request *request,
         return;
     }
 
+    if (log_page.size == 0 || log_page.size > LIBSTORAGE_ADMIN_CMD_BUF_MAX_SIZE) {
+        SPDK_ERRLOG("[libstorage_rpc] invalid log_page size[%u]\n", log_page.size);
+        spdk_jsonrpc_send_error_response(request, SPDK_JSONRPC_ERROR_INVALID_PARAMS, "Invalid parameters");
+        free(log_page.pci);
+        return;
+    }
+
     payload = (uint8_t *)malloc(log_page.size);
     if (payload == NULL) {
         free(log_page.pci);
@@ -1755,7 +1774,7 @@ static void get_error_info_response(struct spdk_jsonrpc_request *request, const 
 {
     int errs;
     struct spdk_json_write_ctx *wv = NULL;
-    struct spdk_nvme_error_information_entry error_info;
+    struct spdk_nvme_error_information_entry *error_info = NULL;
     struct rpc_pci_errs_dev pci = {};
 
     pci.pci = NULL;
@@ -1781,26 +1800,42 @@ static void get_error_info_response(struct spdk_jsonrpc_request *request, const 
         return;
     }
 
-    errs = libstorage_get_error_info(pci.pci, pci.err_entries, &error_info);
+    if (pci.err_entries == 0 || pci.err_entries > LIBSTORAGE_ERROR_LOG_MAX_COUNT) {
+        SPDK_ERRLOG("[libstorage_rpc] invalid err_entries[%u]\n", pci.err_entries);
+        spdk_jsonrpc_send_error_response(request, SPDK_JSONRPC_ERROR_INVALID_PARAMS, "Invalid parameters");
+        free_rpc_pci_err_dev(&pci);
+        return;
+    }
+
+    error_info = (struct spdk_nvme_error_information_entry *)malloc(sizeof(struct spdk_nvme_error_information_entry) *
+                                                                    pci.err_entries);
+    if (error_info == NULL) {
+        SPDK_ERRLOG("[libstorage_rpc]malloc failed!\n");
+        spdk_jsonrpc_send_error_response(request, SPDK_JSONRPC_ERROR_INTERNAL_ERROR, "Invalid memory");
+        free_rpc_pci_err_dev(&pci);
+        return;
+    }
+
+    errs = libstorage_get_error_info(pci.pci, pci.err_entries, error_info);
     if (errs < 0) {
         SPDK_ERRLOG("[libstorage_rpc]get error log info from spdk failed!\n");
         spdk_jsonrpc_send_error_response(request, SPDK_JSONRPC_ERROR_INTERNAL_ERROR,
                                          "Fail to get error info internal");
-        free_rpc_pci_err_dev(&pci);
-        return;
+        goto exit;
     }
 
     wv = spdk_jsonrpc_begin_result(request);
     if (wv == NULL) {
         SPDK_ERRLOG("[libstorage_rpc]start to response rpc call failed!\n");
-        free_rpc_pci_err_dev(&pci);
-        return;
+        goto exit;
     }
 
-    libstorage_geterr_fill_rsp(wv, errs, &error_info);
-    spdk_json_write_object_end(wv);
+    libstorage_geterr_fill_rsp(wv, errs, error_info);
+    (void)spdk_json_write_object_end(wv);
 
     spdk_jsonrpc_end_result(request, wv);
+exit:
+    free(error_info);
     free_rpc_pci_err_dev(&pci);
 }
 SPDK_RPC_REGISTER("get_error_log", get_error_info_response, SPDK_RPC_RUNTIME)

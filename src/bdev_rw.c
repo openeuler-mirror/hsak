@@ -46,6 +46,8 @@ pthread_mutex_t *g_libstorage_admin_op_mutex = NULL;
 /* atomic lock for uio and ublock */
 uint32_t *g_uio_ublock_lock = NULL;
 
+extern struct nvme_bdev_ctrlr * nvme_bdev_ctrlr_get_by_name(const char *name);
+
 static int uio_ublock_lock_init(void)
 {
     int shm_fd = shm_open(UIO_UBLOCK_SHARE_LOCK, O_CREAT | O_RDWR | O_EXCL, S_IRUSR | S_IWUSR);
@@ -67,7 +69,7 @@ static int uio_ublock_lock_init(void)
         return -1;
     }
 
-    g_uio_ublock_lock = (uint32_t *)mmap(NULL, sizeof(uint32_t), PROT_WRITE, MAP_SHARED, shm_fd, 0);
+    g_uio_ublock_lock = (uint32_t *)mmap(NULL, sizeof(uint32_t), PROT_READ | PROT_WRITE, MAP_SHARED, shm_fd, 0);
     if (g_uio_ublock_lock == MAP_FAILED) {
         SPDK_ERRLOG("mmap failed: %d\n", errno);
         close(shm_fd);
@@ -1049,7 +1051,7 @@ static int32_t libstorage_attach_ns_to_ctrlr(const char *ctrlName, uint32_t nsid
         return -EINVAL;
     }
 
-    nvme = nvme_ctrlr_get_by_name(ctrlName);
+    nvme = nvme_bdev_ctrlr_get_by_name(ctrlName);
     if (nvme != NULL) {
         ctrlr = spdk_nvme_ctrlr_get_by_ctrlr(nvme);
     }
@@ -1259,7 +1261,7 @@ int32_t libstorage_delete_namespace(const char *pctrlName, uint32_t nsid)
     spdk_set_thread(g_masterThread);
     libstorage_process_mutex_lock(g_libstorage_admin_op_mutex);
 
-    nvme = nvme_ctrlr_get_by_name(pctrlName);
+    nvme = nvme_bdev_ctrlr_get_by_name(pctrlName);
     if (nvme != NULL) {
         ctrlr = spdk_nvme_ctrlr_get_by_ctrlr(nvme);
     }
@@ -1453,8 +1455,12 @@ void async_io_completion_cb(struct spdk_bdev_io *bdev_io, bool success, void *cb
             bserrno = -EIO;
         }
 
-        SPDK_ERRLOG("Failed to %s %s block on offset[%lu]. sc[%d], sct[%d]\n", op_name[io->opcode],
-                    bdev_io->bdev->name, io->offset, bserrno, scterrno);
+        if (io->opcode >= (uint16_t)OP_NOP) {
+            SPDK_ERRLOG("Invalid io opcode, fd[%d] op[%hu] offset[%lu]\n", io->fd, io->opcode, io->offset);
+        } else {
+            SPDK_ERRLOG("Failed to %s %s block on offset[%lu]. sc[%d], sct[%d]\n", op_name[io->opcode],
+                        bdev_io->bdev->name, io->offset, bserrno, scterrno);
+        }
     } else if (async_io_completion_dif_read_fail(io, bdev_io)) {
         bserrno = -EIO;
     }

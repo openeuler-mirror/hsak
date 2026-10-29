@@ -8,6 +8,9 @@
 #ifndef BDEV_RW_INTERNAL_H
 #define BDEV_RW_INTERNAL_H
 
+#define SECUREC_NEED_ERRNO_TYPE
+#include <securec.h>
+
 #include <dirent.h>
 #include <dlfcn.h>
 #include <fcntl.h>
@@ -16,7 +19,6 @@
 #include <rte_lcore.h>
 #include <rte_malloc.h>
 #include <rte_eal_memconfig.h>
-#include <securec.h>
 #include <string.h>
 
 #include <sys/queue.h>
@@ -75,6 +77,7 @@ enum OPCODE_TYPE {
 
 /* max socket cmd size */
 #define MAX_SOCKET_CMD_SIZE 512
+#define LIBSTORAGE_ERROR_LOG_MAX_COUNT 256 /* NVMe 错误日志条目上限 */
 
 extern bool g_bSameBdevMultiQ;
 extern bool g_bUseReactor;

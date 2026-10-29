@@ -95,6 +95,20 @@ int ublock_rpc_listen(const char *listen_addr)
             return -1;
         }
 
+        struct stat st;
+        if (lstat(g_rpc_listen_addr_unix.sun_path, &st) == 0) {
+            if (S_ISLNK(st.st_mode)) {
+                SPDK_ERRLOG("[ublock] RPC socket path is a symbolic link, refusing to unlink\n");
+                g_rpc_listen_addr_unix.sun_path[0] = '\0';
+                return -1;
+            }
+            if (st.st_uid != 0 && st.st_uid != geteuid()) {
+                SPDK_ERRLOG("[ublock] RPC socket path owned by uid %u, refusing\n", st.st_uid);
+                g_rpc_listen_addr_unix.sun_path[0] = '\0';
+                return -1;
+            }
+        }
+
         /* try to cleanup socket file to start up rpc service */
         if (unlink(g_rpc_listen_addr_unix.sun_path) == 0) {
             /* ublock rpc socket file has an unique name, so it */
@@ -113,6 +127,11 @@ int ublock_rpc_listen(const char *listen_addr)
         /* try to delete the socket file for failing to listen */
         (void)unlink(g_rpc_listen_addr_unix.sun_path);
         return -1;
+    }
+
+    /* Restrict socket file permissions to owner only */
+    if (chmod(listen_addr, S_IRWXU) != 0 ) {
+        SPDK_WARNLOG("[ublock] failed to chmod RPC socket %s: %s\n", listen_addr, strerror(errno));
     }
 
     return 0;
@@ -1236,6 +1255,11 @@ static void *nvme_admin_passthru_cmd_alloc_and_parse(const void *pci_cmd)
     int rc;
     size_t size;
     void *cmd = NULL;
+
+    if (pci_cmd == NULL || spdk_base64_get_encoded_strlen(NVME_ADMIN_CMD_SIZE) != strlen(pci_cmd)) {
+        SPDK_ERRLOG("[ublock] cmd length error\n");
+        return NULL;
+    }
 
     cmd = malloc(NVME_ADMIN_CMD_SIZE);
     if (cmd == NULL) {
